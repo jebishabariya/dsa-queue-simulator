@@ -1,2 +1,2 @@
 # dsa-queue-simulator
-Project 1
+1st assigment of 2nd Year 1st Sem
