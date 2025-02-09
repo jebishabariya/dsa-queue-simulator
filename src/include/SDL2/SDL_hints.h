@@ -1,6 +1,6 @@
 /*
   Simple DirectMedia Layer
-  Copyright (C) 1997-2025 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2024 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -1283,22 +1283,6 @@ extern "C" {
 #define SDL_HINT_LINUX_JOYSTICK_DEADZONES "SDL_LINUX_JOYSTICK_DEADZONES"
 
 /**
- *  \brief A variable controlling the default SDL log levels.
- *
- *  This variable is a comma separated set of category=level tokens that define the default logging levels for SDL applications.
- *
- *  The category can be a numeric category, one of "app", "error", "assert", "system", "audio", "video", "render", "input", "test", or `*` for any unspecified category.
- *
- *  The level can be a numeric level, one of "verbose", "debug", "info", "warn", "error", "critical", or "quiet" to disable that category.
- *
- *  You can omit the category if you want to set the logging level for all categories.
- *
- *  If this hint isn't set, the default log levels are equivalent to:
- *  "app=info,assert=warn,test=verbose,*=error"
- */
-#define SDL_HINT_LOGGING   "SDL_LOGGING"
-
-/**
 *  \brief  When set don't force the SDL app to become a foreground process
 *
 *  This hint only applies to Mac OS X.
@@ -1424,19 +1408,7 @@ extern "C" {
 #define SDL_HINT_MOUSE_RELATIVE_WARP_MOTION  "SDL_MOUSE_RELATIVE_WARP_MOTION"
 
 /**
- *  \brief  A variable controlling whether the hardware cursor stays visible when relative mode is active.
- *
- *  This variable can be set to the following values:
- *    "0"       - The cursor will be hidden while relative mode is active (default)
- *    "1"       - The cursor will remain visible while relative mode is active
- *
- *  Note that for systems without raw hardware inputs, relative mode is implemented using warping, so the hardware cursor will visibly warp between frames if this is enabled on those systems.
- */
-#define SDL_HINT_MOUSE_RELATIVE_CURSOR_VISIBLE  "SDL_MOUSE_RELATIVE_CURSOR_VISIBLE"
-
-/**
- * A variable controlling whether mouse events should generate synthetic touch
- * events
+ *  \brief  A variable controlling whether mouse events should generate synthetic touch events
  *
  *  This variable can be set to the following values:
  *    "0"       - Mouse events will not generate touch events (default for desktop platforms)
@@ -1912,7 +1884,6 @@ extern "C" {
  * Since it's driver-specific, it's only supported where possible and
  * implemented. Currently supported the following drivers:
  *
- * - Wayland (wayland)
  * - KMSDRM (kmsdrm)
  * - Raspberry Pi (raspberrypi)
  */
