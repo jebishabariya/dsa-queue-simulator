@@ -160,7 +160,7 @@ void drawLightForB(SDL_Renderer* renderer, bool isRed){
 
 void drawLightForA(SDL_Renderer* renderer, bool isRed){
     SDL_SetRenderDrawColor(renderer, 150, 150, 150, 255);
-    SDL_Rect lightBox = {375, 450, 50, 30};  // Adjust position for road A
+    SDL_Rect lightBox = {375, 450, 50, 30};  
     SDL_RenderFillRect(renderer, &lightBox);
 
     if(isRed) SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255); 
@@ -173,15 +173,15 @@ void drawLightForA(SDL_Renderer* renderer, bool isRed){
 
 void drawLightForC(SDL_Renderer* renderer, bool isRed){
     SDL_SetRenderDrawColor(renderer, 150, 150, 150, 255);
-    SDL_Rect lightBox = {320, 400, 30, 50};  // Adjust position for road D
+    SDL_Rect lightBox = {320, 375, 30, 50};  // Adjust position for road D
     SDL_RenderFillRect(renderer, &lightBox);
 
     if(isRed) SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255); 
     else SDL_SetRenderDrawColor(renderer, 11, 156, 50, 255);    
-    SDL_Rect straight_Light = {325, 425, 20, 20};
+    SDL_Rect straight_Light = {325, 400, 20, 20};
     SDL_RenderFillRect(renderer, &straight_Light);
 
-    drawArrwow(renderer, 325, 405+10, 325+20, 405+10, 325+10, 405);  // Adjust arrow direction for road D
+    drawArrwow(renderer, 325, 380+10, 325+20, 380+10, 325+10, 380);  // Adjust arrow direction for road D
 }
 
 void drawLightForD(SDL_Renderer* renderer, bool isRed){
