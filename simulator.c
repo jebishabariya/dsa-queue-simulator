@@ -147,7 +147,7 @@ void drawArrwow(SDL_Renderer* renderer, int x1, int y1, int x2, int y2, int x3, 
     }
 }
 
-void drawLightForB(SDL_Renderer* renderer, bool isRed){
+void drawLightForC(SDL_Renderer* renderer, bool isRed){
     SDL_SetRenderDrawColor(renderer, 150, 150, 150, 255);
     SDL_Rect lightBox = {375, 300, 50, 30};
     SDL_RenderFillRect(renderer, &lightBox);
@@ -171,7 +171,7 @@ void drawLightForA(SDL_Renderer* renderer, bool isRed){
     drawArrwow(renderer, 380+10, 455, 380+10, 455+20, 380, 455+10);  // Adjust arrow direction for road A
 }
 
-void drawLightForC(SDL_Renderer* renderer, bool isRed){
+void drawLightForB(SDL_Renderer* renderer, bool isRed){
     SDL_SetRenderDrawColor(renderer, 150, 150, 150, 255);
     SDL_Rect lightBox = {320, 375, 30, 50};  // Adjust position for road D
     SDL_RenderFillRect(renderer, &lightBox);
@@ -214,9 +214,9 @@ void drawRoadsAndLane(SDL_Renderer *renderer, TTF_Font *font) {
         SDL_RenderDrawLine(renderer, WINDOW_WIDTH/2 - ROAD_WIDTH/2 + LANE_WIDTH*i, 800, WINDOW_WIDTH/2 - ROAD_WIDTH/2 + LANE_WIDTH*i, WINDOW_HEIGHT/2 + ROAD_WIDTH/2);
     }
     displayText(renderer, font, "A",400, 10);
-    displayText(renderer, font, "B",400,770);
+    displayText(renderer, font, "C",400,770);
     displayText(renderer, font, "D",10,400);
-    displayText(renderer, font, "C",770,400);
+    displayText(renderer, font, "B",770,400);
 }
 
 void displayText(SDL_Renderer *renderer, TTF_Font *font, char *text, int x, int y){

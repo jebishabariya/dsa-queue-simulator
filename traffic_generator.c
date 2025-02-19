@@ -25,13 +25,30 @@ void generateVehicleNumber(char* buffer) {
 }
 
 // Generate a random lane
-char generateLane() {
-    char lanes[] = {'A', 'B', 'C', 'D'};
+char* generateLane() {
+    char* lanes[] = {"A1", "B1", "C1", "D1"};
     return lanes[rand() % 4];
 }
-int generateLanenum(){
-    char num[]={1,2,3};
-    return num[rand()%3];
+
+const char* getSourceRoad(const char* destinationRoad) {
+    if (strcmp(destinationRoad, "A1") == 0) 
+    {
+        char* lanes[]={"D3","B2","C2"};
+        return lanes[rand()%3];
+    };
+    if (strcmp(destinationRoad, "B1") == 0)  {
+        char* lanes[]={"A3","D2","C2"};
+        return lanes[rand()%3];
+    };
+    if (strcmp(destinationRoad, "C1") == 0)  {
+        char* lanes[]={"B3","A2","D2"};
+        return lanes[rand()%3];
+    };
+    if (strcmp(destinationRoad, "D1") == 0)  {
+        char* lanes[]={"C3","B2","A2"};
+        return lanes[rand()%3];
+    };
+    // Default case (should not happen)
 }
 int main() {
     WSADATA wsa;
@@ -77,10 +94,16 @@ int main() {
     while (1) {
         char vehicle[9];
         generateVehicleNumber(vehicle);
-        char lane = generateLane();
-        int num = generateLanenum();
+        char* lane = generateLane();
+        
 
-        snprintf(buffer, BUFFER_SIZE, "%s:%c%d", vehicle, lane,num);
+        char destinationRoad[3];
+        snprintf(destinationRoad, sizeof(destinationRoad), "%s", lane);
+
+        // Determine source road based on destination road
+        const char* sourceRoad = getSourceRoad(destinationRoad);
+
+        snprintf(buffer, BUFFER_SIZE, "%s:%s:%s", vehicle, sourceRoad, destinationRoad);
 
         // Send message
         send(sock, buffer, strlen(buffer), 0);
