@@ -1,4 +1,6 @@
 #include "queue.h"
+#include <stdlib.h>
+#include <stdio.h>
 
 // Initialize an empty queue
 void initQueue(VehicleQueue* q) {
@@ -6,39 +8,53 @@ void initQueue(VehicleQueue* q) {
     q->size = 0;
 }
 
+// Check if the queue is empty
+int isQueueEmpty(VehicleQueue* q) {
+    return (q->size == 0);
+}
+
 // Add a vehicle to the queue
-void enqueue(VehicleQueue* q, int id, const char* destination) {
-    Vehicle* newVehicle = (Vehicle*)malloc(sizeof(Vehicle));
-    newVehicle->id = id;
-    strcpy(newVehicle->destination, destination);
-    newVehicle->next = NULL;
-    if (q->rear == NULL) {
-        q->front = q->rear = newVehicle;
-    } else {
-        q->rear->next = newVehicle;
-        q->rear = newVehicle;
+void enqueue(VehicleQueue* q, Vehicle vehicle) {
+    Node* newNode = (Node*)malloc(sizeof(Node));
+    if (newNode == NULL) {
+        perror("Queue allocation failed");
+        exit(1);
+    }
+    newNode->vehicle = vehicle;
+    newNode->next = NULL;
+
+    if (q->rear != NULL) {
+        q->rear->next = newNode;
+    }
+    q->rear = newNode;
+    if (q->front == NULL) {
+        q->front = newNode;
     }
     q->size++;
 }
 
 // Remove a vehicle from the queue
-Vehicle* dequeue(VehicleQueue* q) {
-    if (q->front == NULL) return NULL; // Queue is empty
-    Vehicle* temp = q->front;
+Vehicle dequeue(VehicleQueue* q) {
+    if (isQueueEmpty(q)) {
+        perror("Queue is empty");
+        exit(1);
+    }
+
+    Node* temp = q->front;
+    Vehicle vehicle = temp->vehicle;
     q->front = q->front->next;
-    if (q->front == NULL) q->rear = NULL;
+    if (q->front == NULL) {
+        q->rear = NULL;
+    }
+
+    free(temp);
     q->size--;
-    return temp;
+    return vehicle;
 }
 
-// Initialize the priority queue
-void initPriorityQueue(PriorityQueue* pq, int size) {
-    pq->lanes = (Lane*)malloc(size * sizeof(Lane));
-    pq->size = size;
-    for (int i = 0; i < size; i++) {
-        pq->lanes[i].id = 'A' + i;
-        for (int j = 0; j < 3; j++) {
-            initQueue(&pq->lanes[i].roads[j].vehicles);
-        }
+// Free the entire queue
+void freeQueue(VehicleQueue* q) {
+    while (!isQueueEmpty(q)) {
+        dequeue(q);
     }
 }

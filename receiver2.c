@@ -8,6 +8,7 @@
 
 #define PORT 5000
 #define BUFFER_SIZE 100
+#define VEHICLE_FILE "vehicles.data"
 
 int main() {
     WSADATA wsa;
@@ -61,6 +62,15 @@ int main() {
 
     printf("Client connected...\n");
 
+    FILE *file = fopen(VEHICLE_FILE, "a");
+    if (!file) {
+        perror("Failed to open file");
+        closesocket(new_socket);
+        closesocket(server_fd);
+        WSACleanup();
+        return 1;
+    }
+
     while (1) {
         int bytes_read = recv(new_socket, buffer, BUFFER_SIZE, 0);
         if (bytes_read <= 0) {
@@ -68,11 +78,13 @@ int main() {
             break;
         }
         buffer[bytes_read] = '\0'; // Null-terminate the received data
+        fprintf(file, "%s\n", buffer); // Write to file
+        fflush(file); // Ensure data is written immediately
         printf("Received: %s\n", buffer);
         memset(buffer, 0, BUFFER_SIZE); // Clear buffer
     }
 
-    // Cleanup
+    fclose(file);
     closesocket(new_socket);
     closesocket(server_fd);
     WSACleanup();

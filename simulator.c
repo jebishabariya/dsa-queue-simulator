@@ -5,7 +5,7 @@
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
-
+#include "queue.h"
 #define MAX_LINE_LENGTH 20
 #define MAIN_FONT "D:\\project\\ttf\\DejaVuSans.ttf"  // Update to a valid Windows font path
 #define WINDOW_WIDTH 800
