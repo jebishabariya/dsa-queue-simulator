@@ -29,7 +29,10 @@ char generateLane() {
     char lanes[] = {'A', 'B', 'C', 'D'};
     return lanes[rand() % 4];
 }
-
+int generateLanenum(){
+    char num[]={1,2,3};
+    return num[rand()%3];
+}
 int main() {
     WSADATA wsa;
     SOCKET sock;
@@ -75,8 +78,9 @@ int main() {
         char vehicle[9];
         generateVehicleNumber(vehicle);
         char lane = generateLane();
+        int num = generateLanenum();
 
-        snprintf(buffer, BUFFER_SIZE, "%s:%c", vehicle, lane);
+        snprintf(buffer, BUFFER_SIZE, "%s:%c%d", vehicle, lane,num);
 
         // Send message
         send(sock, buffer, strlen(buffer), 0);

@@ -283,10 +283,10 @@ DWORD WINAPI readAndParseFile(LPVOID arg) {
         while (fgets(line, sizeof(line), file)) {
             line[strcspn(line, "\n")] = 0;
             char* vehicleNumber = strtok(line, ":");
-            char* road = strtok(NULL, ":");
+            char* destinationRoad = strtok(NULL, ":");
 
-            if (vehicleNumber && road)  
-                printf("Vehicle: %s, Road: %s\n", vehicleNumber, road);
+            if (vehicleNumber && destinationRoad)  
+                printf("Vehicle: %s, Road: %s\n", vehicleNumber, destinationRoad);
             else 
                 printf("Invalid format: %s\n", line);
         }
