@@ -1,10 +1,13 @@
 #include "queue.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
+
 
 // Initialize an empty queue
 void initQueue(VehicleQueue* q) {
-    q->front = q->rear = NULL;
+    q->front = NULL;
+    q->rear = NULL;
     q->size = 0;
 }
 
@@ -14,23 +17,31 @@ int isQueueEmpty(VehicleQueue* q) {
 }
 
 // Add a vehicle to the queue
-void enqueue(VehicleQueue* q, Vehicle vehicle) {
+bool enqueue(VehicleQueue* queue, Vehicle vehicle) {
+    // Check if queue has reached maximum size
+    if (queue->size >= 15) {
+        printf("Queue is full (max 15 vehicles). Vehicle %s rejected.\n", vehicle.vehicleNumber);
+        return false;
+    }
+
     Node* newNode = (Node*)malloc(sizeof(Node));
     if (newNode == NULL) {
-        perror("Queue allocation failed");
-        exit(1);
+        printf("Memory allocation failed\n");
+        return false;
     }
+    
     newNode->vehicle = vehicle;
     newNode->next = NULL;
-
-    if (q->rear != NULL) {
-        q->rear->next = newNode;
+    
+    if (queue->rear == NULL) {
+        queue->front = queue->rear = newNode;
+    } else {
+        queue->rear->next = newNode;
+        queue->rear = newNode;
     }
-    q->rear = newNode;
-    if (q->front == NULL) {
-        q->front = newNode;
-    }
-    q->size++;
+    
+    queue->size++;
+    return true;
 }
 
 // Remove a vehicle from the queue
