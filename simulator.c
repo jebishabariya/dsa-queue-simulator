@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "queue.h"
+
 #define MAX_LINE_LENGTH 20
 #define MAIN_FONT "D:\\project\\ttf\\DejaVuSans.ttf"  // Update to a valid Windows font path
 #define WINDOW_WIDTH 800
@@ -20,7 +21,7 @@
 const char* VEHICLE_FILE = "vehicles.data";
 
 // Road queues for each direction
-VehicleQueue roadQueues[4];  // A, B, C, D
+VehicleQueue roadQueues[4][3];  // [road][lane]
 
 typedef struct{
     int currentLight;
@@ -42,11 +43,23 @@ void updateVehiclePosition(Vehicle* vehicle, int roadIndex, int lane);
 void drawArrwow(SDL_Renderer* renderer, int x1, int y1, int x2, int y2, int x3, int y3);
 DWORD WINAPI chequeQueue(LPVOID arg);
 DWORD WINAPI readAndParseFile(LPVOID arg);
+bool checkRoadAPriority();
+bool shouldRemoveRoadAPriority();
 void initRoadQueues() {
-    for(int i = 0; i < 4; i++) {
-        initQueue(&roadQueues[i]);
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 3; j++) {
+            initQueue(&roadQueues[i][j]);  // Pass a single VehicleQueue
+        }
     }
 }
+bool checkRoadAPriority() {
+    return roadQueues[0][1].size >= 10;  // Lane 2 of Road A
+}
+
+bool shouldRemoveRoadAPriority() {
+    return roadQueues[0][1].size <= 5;  // Lane 2 of Road A
+}
+
 
 void swap(int *a, int *b) {
     int temp = *a;
@@ -55,14 +68,6 @@ void swap(int *a, int *b) {
 }
 
 // Check if road A needs priority
-bool checkRoadAPriority() {
-    return roadQueues[0].size >= 10;
-}
-
-// Check if road A priority should be removed
-bool shouldRemoveRoadAPriority() {
-    return roadQueues[0].size <= 5;
-}
 
 void printMessageHelper(const char* message, int count) {
     for (int i = 0; i < count; i++) printf("%s\n", message);
@@ -116,10 +121,12 @@ int main(int argc, char *argv[]) {
 
         // Draw vehicles
         for (int i = 0; i < 4; i++) {
-            Node* current = roadQueues[i].front;
-            while (current != NULL) {
-                drawVehicle(renderer, &current->vehicle);
-                current = current->next;
+            for (int j = 0; j < 3; j++) {
+                Node* current = roadQueues[i][j].front;
+                while (current != NULL) {
+                    drawVehicle(renderer, &current->vehicle);
+                    current = current->next;
+                }
             }
         }
 
@@ -135,7 +142,9 @@ int main(int argc, char *argv[]) {
     if (tQueue) CloseHandle(tQueue);
     if (tReadFile) CloseHandle(tReadFile);
     for (int i = 0; i < 4; i++) {
-        freeQueue(&roadQueues[i]);
+        for (int j = 0; j < 3; j++) {
+            freeQueue(&roadQueues[i][j]);  // Pass a single VehicleQueue
+        }
     }
     if (font) TTF_CloseFont(font);
     if (renderer) SDL_DestroyRenderer(renderer);
@@ -146,25 +155,23 @@ int main(int argc, char *argv[]) {
 }
 
 void drawVehicle(SDL_Renderer* renderer, Vehicle* vehicle) {
-    // Set color to black for all vehicles
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);  // Black color
-
-    // Draw vehicle as a rectangle
     SDL_Rect vehicleRect = {
-        (int)vehicle->xPos - VEHICLE_SIZE/2,
-        (int)vehicle->yPos - VEHICLE_SIZE/2,
+        (int)vehicle->xPos - VEHICLE_SIZE / 2,
+        (int)vehicle->yPos - VEHICLE_SIZE / 2,
         VEHICLE_SIZE,
         VEHICLE_SIZE
     };
     SDL_RenderFillRect(renderer, &vehicleRect);
 }
 
+
 void updateVehiclePosition(Vehicle* vehicle, int roadIndex, int lane) {
     int centerX = WINDOW_WIDTH / 2;
     int centerY = WINDOW_HEIGHT / 2;
     int laneOffset = (lane - 2) * LANE_WIDTH;
 
-    switch(roadIndex) {
+    switch (roadIndex) {
         case 0: // Road A (North)
             vehicle->xPos = centerX + laneOffset;
             vehicle->yPos = LANE_WIDTH;
@@ -362,7 +369,7 @@ void refreshLight(SDL_Renderer *renderer, SharedData* sharedData){
 DWORD WINAPI chequeQueue(LPVOID arg) {
     SharedData* sharedData = (SharedData*)arg;
     bool isAPriority = false;
-    
+
     while (1) {
         // Check for road A priority
         if (!isAPriority && checkRoadAPriority()) {
@@ -377,13 +384,13 @@ DWORD WINAPI chequeQueue(LPVOID arg) {
             // Priority mode: alternate between A and other roads
             sharedData->nextLight = 0;  // A gets green
             Sleep(5000);
-            
+
             // Choose next road based on queue sizes
             int maxSize = 0;
             int nextRoad = 1;
             for (int i = 1; i < 4; i++) {
-                if (roadQueues[i].size > maxSize) {
-                    maxSize = roadQueues[i].size;
+                if (roadQueues[i][1].size > maxSize) {
+                    maxSize = roadQueues[i][1].size;
                     nextRoad = i;
                 }
             }
@@ -398,53 +405,66 @@ DWORD WINAPI chequeQueue(LPVOID arg) {
         }
     }
     return 0;
+
 }
 
 void processVehicles(SharedData* sharedData) {
     int greenRoad = sharedData->currentLight;
-    
-    // Process all roads
+
+    // Process all roads and lanes
     for (int roadIndex = 0; roadIndex < 4; roadIndex++) {
-        if (isQueueEmpty(&roadQueues[roadIndex])) continue;
+        for (int lane = 0; lane < 3; lane++) {
+            if (isQueueEmpty(&roadQueues[roadIndex][lane])) continue;
 
-        Node* current = roadQueues[roadIndex].front;
-        Node* prev = NULL;
+            Node* current = roadQueues[roadIndex][lane].front;
+            Node* prev = NULL;
 
-        while (current != NULL) {
-            bool shouldMove = false;
-            int destRoadIndex;
+            while (current != NULL) {
+                bool shouldMove = false;
 
-            // Determine if vehicle should move
-            if (current->vehicle.lane == 3) {
-                // Lane 3 vehicles always move
-                destRoadIndex = (roadIndex + 1) % 4;
-                shouldMove = true;
-            } else if (roadIndex == greenRoad && current->vehicle.lane == 2) {
-                // Lane 2 vehicles move when road has green light
-                destRoadIndex = current->vehicle.destinationRoad[0] - 'A';
-                shouldMove = true;
-            }
+                if (lane == 0) {
+                    // Lane 1: Incoming lane (move every 3 seconds)
+                    shouldMove = true;
+                } else if (lane == 1 && roadIndex == greenRoad) {
+                    // Lane 2: Outgoing lane (move only if light is green)
+                    shouldMove = true;
+                } else if (lane == 2) {
+                    // Lane 3: Outgoing lane (move without waiting for light)
+                    shouldMove = true;
+                }
 
-            if (shouldMove) {
-                // Dequeue from current road
-                if (prev == NULL) {
-                    roadQueues[roadIndex].front = current->next;
+                if (shouldMove) {
+                    // Move vehicle forward
+                    current->vehicle.xPos += VEHICLE_SPEED;
+                    current->vehicle.yPos += VEHICLE_SPEED;
+
+                    // Check if vehicle has reached the junction
+                    if (current->vehicle.xPos >= WINDOW_WIDTH / 2 - ROAD_WIDTH / 2 &&
+                        current->vehicle.xPos <= WINDOW_WIDTH / 2 + ROAD_WIDTH / 2 &&
+                        current->vehicle.yPos >= WINDOW_HEIGHT / 2 - ROAD_WIDTH / 2 &&
+                        current->vehicle.yPos <= WINDOW_HEIGHT / 2 + ROAD_WIDTH / 2) {
+                        // Dequeue vehicle
+                        if (prev == NULL) {
+                            roadQueues[roadIndex][lane].front = current->next;
+                        } else {
+                            prev->next = current->next;
+                        }
+
+                        if (roadQueues[roadIndex][lane].front == NULL) {
+                            roadQueues[roadIndex][lane].rear = NULL;
+                        }
+
+                        free(current);
+                        roadQueues[roadIndex][lane].size--;
+                        current = prev ? prev->next : roadQueues[roadIndex][lane].front;
+                    } else {
+                        prev = current;
+                        current = current->next;
+                    }
                 } else {
-                    prev->next = current->next;
+                    prev = current;
+                    current = current->next;
                 }
-                
-                if (roadQueues[roadIndex].front == NULL) {
-                    roadQueues[roadIndex].rear = NULL;
-                }
-                
-                // Free the node and update size
-                free(current);
-                roadQueues[roadIndex].size--;
-                
-                current = prev ? prev->next : roadQueues[roadIndex].front;
-            } else {
-                prev = current;
-                current = current->next;
             }
         }
     }
@@ -452,8 +472,8 @@ void processVehicles(SharedData* sharedData) {
 
 DWORD WINAPI readAndParseFile(LPVOID arg) {
     SharedData* sharedData = (SharedData*)arg;
-    
-    while(1) {
+
+    while (1) {
         FILE* file = fopen(VEHICLE_FILE, "r");
         if (!file) {
             perror("Error opening file");
@@ -464,12 +484,12 @@ DWORD WINAPI readAndParseFile(LPVOID arg) {
         char line[MAX_LINE_LENGTH];
         while (fgets(line, sizeof(line), file)) {
             line[strcspn(line, "\n")] = 0;
-            
+
             Vehicle newVehicle;
             char* vehicleId = strtok(line, ":");
             char* sourceRoad = strtok(NULL, ":");
             char* destinationRoad = strtok(NULL, ":");
-            
+
             if (vehicleId && sourceRoad && destinationRoad) {
                 strncpy(newVehicle.vehicleNumber, vehicleId, 8);
                 newVehicle.vehicleNumber[8] = '\0';
@@ -477,22 +497,22 @@ DWORD WINAPI readAndParseFile(LPVOID arg) {
                 newVehicle.sourceRoad[2] = '\0';
                 strncpy(newVehicle.destinationRoad, destinationRoad, 2);
                 newVehicle.destinationRoad[2] = '\0';
-                
+
                 int sourceIndex = sourceRoad[0] - 'A';
                 int destIndex = destinationRoad[0] - 'A';
-                
+
                 if ((sourceIndex + 1) % 4 == destIndex) {
-                    newVehicle.lane = 3;
+                    newVehicle.lane = 2;  // Lane 3 (outgoing, no light)
                 } else {
-                    newVehicle.lane = 2;
+                    newVehicle.lane = 1;  // Lane 2 (outgoing, affected by light)
                 }
-                
+
                 updateVehiclePosition(&newVehicle, sourceIndex, newVehicle.lane);
-                
-                // Try to enqueue and check if successful
-                if (enqueue(&roadQueues[sourceIndex], newVehicle)) {
-                    printf("Added Vehicle %s from %s to %s in lane %d\n", 
-                           newVehicle.vehicleNumber, newVehicle.sourceRoad, 
+
+                // Enqueue to the appropriate lane
+                if (enqueue(&roadQueues[sourceIndex][newVehicle.lane - 1], newVehicle)) {
+                    printf("Added Vehicle %s from %s to %s in lane %d\n",
+                           newVehicle.vehicleNumber, newVehicle.sourceRoad,
                            newVehicle.destinationRoad, newVehicle.lane);
                 }
             }
