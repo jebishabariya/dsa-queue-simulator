@@ -434,28 +434,48 @@ void processVehicles(SharedData* sharedData) {
                 }
 
                 if (shouldMove) {
-                    // Move vehicle forward
-                    current->vehicle.xPos += VEHICLE_SPEED;
-                    current->vehicle.yPos += VEHICLE_SPEED;
+                    // Move vehicle forward in the source lane
+                    switch (roadIndex) {
+                        case 0: // Road A (North)
+                            current->vehicle.yPos += VEHICLE_SPEED;
+                            break;
+                        case 1: // Road B (East)
+                            current->vehicle.xPos -= VEHICLE_SPEED;
+                            break;
+                        case 2: // Road C (South)
+                            current->vehicle.yPos -= VEHICLE_SPEED;
+                            break;
+                        case 3: // Road D (West)
+                            current->vehicle.xPos += VEHICLE_SPEED;
+                            break;
+                    }
 
                     // Check if vehicle has reached the junction
                     if (current->vehicle.xPos >= WINDOW_WIDTH / 2 - ROAD_WIDTH / 2 &&
                         current->vehicle.xPos <= WINDOW_WIDTH / 2 + ROAD_WIDTH / 2 &&
                         current->vehicle.yPos >= WINDOW_HEIGHT / 2 - ROAD_WIDTH / 2 &&
                         current->vehicle.yPos <= WINDOW_HEIGHT / 2 + ROAD_WIDTH / 2) {
-                        // Dequeue vehicle
-                        if (prev == NULL) {
-                            roadQueues[roadIndex][lane].front = current->next;
+                        // Vehicle has reached the junction
+                        Vehicle dequeuedVehicle = dequeue(&roadQueues[roadIndex][lane]);
+                        printf("Dequeued Vehicle %s from Road %c Lane %d\n",
+                               dequeuedVehicle.vehicleNumber, 'A' + roadIndex, lane + 1);
+
+                        // Determine destination road and lane
+                        int destRoadIndex = dequeuedVehicle.destinationRoad[0] - 'A';
+                        int destLane = (destRoadIndex == (roadIndex + 1) % 4) ? 2 : 1;
+
+                        // Enqueue to the destination lane if it has space
+                        if (roadQueues[destRoadIndex][destLane - 1].size < 15) {
+                            // Update vehicle position to the destination lane
+                            updateVehiclePosition(&dequeuedVehicle, destRoadIndex, destLane);
+                            enqueue(&roadQueues[destRoadIndex][destLane - 1], dequeuedVehicle);
+                            printf("Enqueued Vehicle %s to Road %c Lane %d\n",
+                                   dequeuedVehicle.vehicleNumber, 'A' + destRoadIndex, destLane);
                         } else {
-                            prev->next = current->next;
+                            printf("Destination lane is full. Vehicle %s discarded.\n",
+                                   dequeuedVehicle.vehicleNumber);
                         }
 
-                        if (roadQueues[roadIndex][lane].front == NULL) {
-                            roadQueues[roadIndex][lane].rear = NULL;
-                        }
-
-                        free(current);
-                        roadQueues[roadIndex][lane].size--;
                         current = prev ? prev->next : roadQueues[roadIndex][lane].front;
                     } else {
                         prev = current;
@@ -510,6 +530,7 @@ DWORD WINAPI readAndParseFile(LPVOID arg) {
                 updateVehiclePosition(&newVehicle, sourceIndex, newVehicle.lane);
 
                 // Enqueue to the appropriate lane
+                
                 if (enqueue(&roadQueues[sourceIndex][newVehicle.lane - 1], newVehicle)) {
                     printf("Added Vehicle %s from %s to %s in lane %d\n",
                            newVehicle.vehicleNumber, newVehicle.sourceRoad,
