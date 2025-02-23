@@ -4,7 +4,7 @@
 Traffic Simulation Project
 This project simulates traffic flow at a four-way intersection with traffic lights and multiple lanes. The simulation demonstrates vehicle movement, lane changing, and traffic light management for optimal traffic flow.
 
-# Features
+## Features
 
 -Four-way intersection with traffic lights
 -Multiple lanes per road:
@@ -18,7 +18,7 @@ This project simulates traffic flow at a four-way intersection with traffic ligh
 -Queue-based vehicle management
 -Real-time visualization using SDL2
 
-# Prerequisites:
+## Prerequisites:
 Before running this project, make sure you have the following installed:
 
 -SDL2 Library
@@ -34,7 +34,7 @@ Run the simulation.
 ## DEMO
 ![Traffic Simulation Demo](./trafficsimulation.gif)
 
-# ALGORITHM
+## ALGORITHM
 Traffic Light Control:
 
 Traffic lights change based on queue sizes and priority rules.
@@ -53,7 +53,7 @@ File Parsing:
 
 The vehicles.data file is read line by line, and vehicles are enqueued to their respective lanes.
 
-# DATA STRUCTURES:
+## DATA STRUCTURES:
 VehicleQueue: A queue data structure to manage vehicles in each lane.
 
 SharedData: A structure to share data between threads (e.g., traffic light state).
@@ -65,7 +65,7 @@ Thread 2: Handles file parsing and enqueuing vehicles (readAndParseFile).
 
 Main Thread: Handles rendering and vehicle movement.
 
-# References:
+## References:
 SDL2 Documentation: https://wiki.libsdl.org/SDL2/FrontPage
 SDL2_ttf Documentation:https://github.com/libsdl-org/SDL_ttf
 
