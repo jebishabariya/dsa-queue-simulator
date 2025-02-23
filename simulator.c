@@ -24,6 +24,7 @@
 #define DEQUEUE_INTERVAL 2000
 #define MAX_QUEUE_SIZE 15
 #define MAX_LINE_LENGTH 20
+#define LANE3_DEQUEUE_TIME 1000  
 
 #define TEMP_FILE "temp_vehicle.data"
 
@@ -52,6 +53,7 @@ void drawVehicle(SDL_Renderer* renderer, Vehicle* vehicle);
 void processVehicles(SharedData* sharedData);
 void updateVehiclePosition(Vehicle* vehicle, int roadIndex, int lane);
 void drawArrwow(SDL_Renderer* renderer, int x1, int y1, int x2, int y2, int x3, int y3);
+void moveVehicleBackward(Vehicle* vehicle, int roadIndex); 
 DWORD WINAPI chequeQueue(LPVOID arg);
 DWORD WINAPI readAndParseFile(LPVOID arg);
 bool checkRoadAPriority();
@@ -135,9 +137,8 @@ int main(int argc, char *argv[]) {
             for (int j = 0; j < 3; j++) {
                 Node* current = roadQueues[i][j].front;
                 while (current != NULL) {
-                    if (current->vehicle.isActive) {  // Only draw if active
-                        drawVehicle(renderer, &current->vehicle);
-                    }
+                    moveVehicleBackward(&current->vehicle, i);  // Move vehicle backward in Lane 3
+                    drawVehicle(renderer, &current->vehicle);    // Draw the vehicle
                     current = current->next;
                 }
             }
@@ -186,26 +187,92 @@ void updateVehiclePosition(Vehicle* vehicle, int roadIndex, int lane) {
     int centerX = WINDOW_WIDTH / 2;
     int centerY = WINDOW_HEIGHT / 2;
     int laneOffset = (lane - 2) * LANE_WIDTH;
-
-    switch (roadIndex) {
-        case 0: // Road A (North)
-            vehicle->xPos = centerX + laneOffset;
-            vehicle->yPos = LANE_WIDTH;
-            break;
-        case 1: // Road B (East)
-            vehicle->xPos = WINDOW_WIDTH - LANE_WIDTH;
-            vehicle->yPos = centerY + laneOffset;
-            break;
-        case 2: // Road C (South)
-            vehicle->xPos = centerX - laneOffset;
-            vehicle->yPos = WINDOW_HEIGHT - LANE_WIDTH;
-            break;
-        case 3: // Road D (West)
-            vehicle->xPos = LANE_WIDTH;
-            vehicle->yPos = centerY - laneOffset;
-            break;
+    if (lane == 3) {
+        // If lane == 3, vehicles start from the front and move backward
+        switch (roadIndex) {
+            case 0: // Road A (North)
+                vehicle->xPos = centerX + laneOffset;
+                vehicle->yPos = LANE_WIDTH;
+                break;
+            case 1: // Road B (East)
+                vehicle->xPos = WINDOW_WIDTH - LANE_WIDTH;
+                vehicle->yPos = centerY + laneOffset;
+                break;
+            case 2: // Road C (South)
+                vehicle->xPos = centerX - laneOffset;
+                vehicle->yPos = WINDOW_HEIGHT - LANE_WIDTH;
+                break;
+            case 3: // Road D (West)
+                vehicle->xPos = LANE_WIDTH;
+                vehicle->yPos = centerY - laneOffset;
+                break;
+        }
+    }
+    else {
+        // Normal behavior for Lane 1 and Lane 2
+        switch (roadIndex) {
+            case 0: // Road A (North)
+                vehicle->xPos = centerX + laneOffset;
+                vehicle->yPos = LANE_WIDTH;
+                break;
+            case 1: // Road B (East)
+                vehicle->xPos = WINDOW_WIDTH - LANE_WIDTH;
+                vehicle->yPos = centerY + laneOffset;
+                break;
+            case 2: // Road C (South)
+                vehicle->xPos = centerX - laneOffset;
+                vehicle->yPos = WINDOW_HEIGHT - LANE_WIDTH;
+                break;
+            case 3: // Road D (West)
+                vehicle->xPos = LANE_WIDTH;
+                vehicle->yPos = centerY - laneOffset;
+                break;
+        }
     }
 }
+
+// Additional function to simulate the vehicle moving along the lane
+void moveVehicleBackward(Vehicle* vehicle, int roadIndex) {
+    // First, get the front vehicle (i.e., the one that needs to move backward)
+    Node* current = roadQueues[roadIndex][2].front; // Lane 3 is index 2
+
+    if (current == NULL) {
+        printf("No vehicles to move backward in Lane 3.\n");
+        return;
+    }
+
+    // Get the vehicle at the front of Lane 3
+    Vehicle vehicleToMove = current->vehicle;
+
+    // Update the vehicle position (moving backward)
+    switch (roadIndex) {
+        case 0: // Road A (North)
+            vehicleToMove.yPos -= VEHICLE_MOVE_SPEED;  // Move backward on the Y-axis
+            break;
+        case 1: // Road B (East)
+            vehicleToMove.xPos += VEHICLE_MOVE_SPEED;  // Move backward on the X-axis
+            break;
+        case 2: // Road C (South)
+            vehicleToMove.yPos += VEHICLE_MOVE_SPEED;  // Move backward on the Y-axis
+            break;
+        case 3: // Road D (West)
+            vehicleToMove.xPos -= VEHICLE_MOVE_SPEED;  // Move backward on the X-axis
+            break;
+    }
+
+    // After moving, enqueue the vehicle back into the same lane
+    if (roadQueues[roadIndex][2].size < MAX_QUEUE_SIZE) {
+        dequeue(&roadQueues[roadIndex][2]); // Re-enqueue into Lane 3
+        printf("Vehicle %s moved backward in Lane 3 of Road %c.\n", vehicleToMove.vehicleNumber, 'A' + roadIndex);
+    } else {
+        printf("Lane 3 of Road %c is full, vehicle %s could not move backward.\n", 'A' + roadIndex, vehicleToMove.vehicleNumber);
+    }
+
+    // Remove the vehicle from the front of Lane 3
+    dequeue(&roadQueues[roadIndex][2]);
+}
+
+
 
 bool initializeSDL(SDL_Window **window, SDL_Renderer **renderer) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -503,7 +570,7 @@ void processVehicles(SharedData* sharedData) {
 
                         // Determine destination road and lane
                         int destRoadIndex = dequeuedVehicle.destinationRoad[0] - 'A';
-                        int destLane = (destRoadIndex == (roadIndex + 1) % 4) ? 2 : 1;
+                        int destLane = 3;
 
                         // Enqueue to the destination lane if it has space
                         if (roadQueues[destRoadIndex][destLane - 1].size < MAX_QUEUE_SIZE) {
@@ -568,8 +635,8 @@ DWORD WINAPI readAndParseFile(LPVOID arg) {
                     newVehicle.destinationRoad[2] = '\0';
 
                     int sourceIndex = sourceRoad[0] - 'A';
-
-                    if ((sourceIndex + 1) % 4 == (destinationRoad[0] - 'A')) {
+                    int lane = sourceRoad[1]-'0';
+                    if (lane==2) {
                         newVehicle.lane = 2;  
                     } else {
                         newVehicle.lane = 1;  
@@ -578,6 +645,7 @@ DWORD WINAPI readAndParseFile(LPVOID arg) {
                     updateVehiclePosition(&newVehicle, sourceIndex, newVehicle.lane);
 
                     if (enqueue(&roadQueues[sourceIndex][newVehicle.lane - 1], &newVehicle)) {
+                        updateVehiclePosition(&newVehicle, sourceIndex, newVehicle.lane);
                         printf("Added Vehicle %s from %s to %s in lane %d\n",
                                newVehicle.vehicleNumber, newVehicle.sourceRoad,
                                newVehicle.destinationRoad, newVehicle.lane);
