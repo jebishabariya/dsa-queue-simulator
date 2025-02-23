@@ -190,7 +190,7 @@ void updateVehiclePosition(Vehicle* vehicle, int roadIndex, int lane) {
     int centerY = WINDOW_HEIGHT / 2;
     int laneOffset = (lane - 2) * LANE_WIDTH;
 
-    if (lane == 3) {
+    if (lane == 1) {
         // For lane 3, vehicles start from the junction and move backwards
         switch (roadIndex) {
             case 0: // Road A (North)
@@ -488,7 +488,7 @@ void processVehicles(SharedData* sharedData) {
                 if (lane == 0) {
                     // Lane 1: Incoming lane (dequeue every 2 seconds)
                     shouldMove = true;
-                    shouldDequeue = (currentTime - lastDequeueTime[roadIndex][lane] >= DEQUEUE_INTERVAL);
+                    shouldDequeue = (currentTime - lastDequeueTime[roadIndex][lane] >= 7000);
                 } else if (lane == 1 && roadIndex == greenRoad) {
                     // Lane 2: Outgoing lane (move only if light is green)
                     shouldMove = true;
@@ -498,6 +498,7 @@ void processVehicles(SharedData* sharedData) {
                     shouldDequeue = (currentTime - lastDequeueTime[roadIndex][lane] >= LANE3_DEQUEUE_TIME);
                 }
 
+                
                 if (shouldMove) {
                     // Check distance to the previous vehicle
                     if (prev != NULL) {
@@ -525,9 +526,35 @@ void processVehicles(SharedData* sharedData) {
                         }
                     }
 
-                    if (lane == 2) {  // Lane 3 moves backward
+                    if (lane == 0) {  // Lane 0 moves backward
                         moveVehicleBackward(&current->vehicle, roadIndex);
-                    } else {  // Lane 1 and 2 move forward
+                        
+                        // Check if vehicle has reached the end of lane 0
+                        bool hasReachedEnd = false;
+                        switch (roadIndex) {
+                            case 0: // Road A (North)
+                                hasReachedEnd = current->vehicle.yPos <= 0;
+                                break;
+                            case 1: // Road B (East)
+                                hasReachedEnd = current->vehicle.xPos >= WINDOW_WIDTH;
+                                break;
+                            case 2: // Road C (South)
+                                hasReachedEnd = current->vehicle.yPos >= WINDOW_HEIGHT;
+                                break;
+                            case 3: // Road D (West)
+                                hasReachedEnd = current->vehicle.xPos <= 0;
+                                break;
+                        }
+
+                        if (hasReachedEnd) {
+                            // Vehicle has reached the end of lane 0, dequeue it
+                            Vehicle dequeuedVehicle = dequeue(&roadQueues[roadIndex][lane]);
+                            printf("Dequeued Vehicle %s from Road %c Lane %d (reached end)\n",
+                                   dequeuedVehicle.vehicleNumber, 'A' + roadIndex, lane + 1);
+                            current = prev ? prev->next : roadQueues[roadIndex][lane].front;
+                            continue;
+                        }
+                    }  else {  // Lane 1 and 2 move forward
                         switch (roadIndex) {
                             case 0:
                                 current->vehicle.yPos += VEHICLE_MOVE_SPEED;
@@ -543,9 +570,10 @@ void processVehicles(SharedData* sharedData) {
                                 break;
                         }
                     }
-
+    
                     // Check if vehicle has reached the junction
-                    if (current->vehicle.xPos >= WINDOW_WIDTH / 2 - ROAD_WIDTH / 2 &&
+                    if (lane!= 0 &&
+                        current->vehicle.xPos >= WINDOW_WIDTH / 2 - ROAD_WIDTH / 2 &&
                         current->vehicle.xPos <= WINDOW_WIDTH / 2 + ROAD_WIDTH / 2 &&
                         current->vehicle.yPos >= WINDOW_HEIGHT / 2 - ROAD_WIDTH / 2 &&
                         current->vehicle.yPos <= WINDOW_HEIGHT / 2 + ROAD_WIDTH / 2) {
@@ -556,7 +584,7 @@ void processVehicles(SharedData* sharedData) {
 
                         // Determine destination road and lane
                         int destRoadIndex = dequeuedVehicle.destinationRoad[0] - 'A';
-                        int destLane = 3;
+                        int destLane = 1;
 
                         // Enqueue to the destination lane if it has space
                         if (roadQueues[destRoadIndex][destLane - 1].size < MAX_QUEUE_SIZE) {
@@ -625,7 +653,7 @@ DWORD WINAPI readAndParseFile(LPVOID arg) {
                     if (lane==2) {
                         newVehicle.lane = 2;  
                     } else {
-                        newVehicle.lane = 1;  
+                        newVehicle.lane = 3;  
                     }
 
                     updateVehiclePosition(&newVehicle, sourceIndex, newVehicle.lane);

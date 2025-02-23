@@ -2,7 +2,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
-
+#include "src/include/SDL2/SDL.h"
+#include "src/include/SDL2/SDL_ttf.h"
 
 // Initialize an empty queue
 void initQueue(VehicleQueue* q) {
@@ -19,7 +20,7 @@ int isQueueEmpty(VehicleQueue* q) {
 // Add a vehicle to the queue
 bool enqueue(VehicleQueue* queue, Vehicle* vehicle) {
     // Check if queue has reached maximum size
-
+    
 
     Node* newNode = (Node*)malloc(sizeof(Node));
     if (newNode == NULL) {
@@ -29,6 +30,7 @@ bool enqueue(VehicleQueue* queue, Vehicle* vehicle) {
     
     newNode->vehicle = *vehicle;  // Copy vehicle data
     newNode->vehicle.isActive = true;  // Mark as active
+    newNode->vehicle.enqueueTime = SDL_GetTicks(); 
     newNode->next = NULL;
 
     

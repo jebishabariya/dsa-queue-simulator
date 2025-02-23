@@ -17,7 +17,8 @@ typedef struct {
     char destinationRoad[3];
     int lane;
     uint32_t lastMoveTime;
-    int enqueueTime;
+    uint32_t enqueueTime; 
+    //int enqueueTime;
     bool isActive;
 } Vehicle;
 
