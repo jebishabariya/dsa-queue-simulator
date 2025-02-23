@@ -3,15 +3,21 @@
 
 #define MAX_VEHICLES 100
 #include <stdbool.h>
+#include <stdint.h>
 
 // Vehicle structure
 typedef struct {
+    float xPos;
+    float yPos;
+    float targetX;
+    float targetY;
+    bool isMoving;
     char vehicleNumber[9];
-    char sourceRoad[3];    // Source road (e.g., "A1")
-    char destinationRoad[3]; // Destination road (e.g., "B1")
-    int lane;              // Lane number (1, 2, or 3)
-    float xPos;           // Current x position of the vehicle
-    float yPos;           // Current y position of the vehicle
+    char sourceRoad[3];
+    char destinationRoad[3];
+    int lane;
+    uint32_t lastMoveTime;
+    int enqueueTime;
 } Vehicle;
 
 // Node for the queue

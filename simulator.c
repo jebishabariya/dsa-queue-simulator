@@ -5,6 +5,7 @@
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include "queue.h"
 
 #define MAX_LINE_LENGTH 20
@@ -16,7 +17,12 @@
 #define LANE_WIDTH 50
 #define ARROW_SIZE 15
 #define VEHICLE_SIZE 20
-#define VEHICLE_SPEED 2
+#define VEHICLE_SPACING 30
+#define VEHICLE_MOVE_SPEED 3
+#define JUNCTION_DISTANCE 100
+#define DEQUEUE_INTERVAL 2000
+#define MAX_QUEUE_SIZE 15
+#define MAX_LINE_LENGTH 20
 
 const char* VEHICLE_FILE = "vehicles.data";
 
@@ -129,6 +135,7 @@ int main(int argc, char *argv[]) {
                 }
             }
         }
+
 
         // Process vehicle movements
         processVehicles(&sharedData);
@@ -411,7 +418,6 @@ DWORD WINAPI chequeQueue(LPVOID arg) {
 void processVehicles(SharedData* sharedData) {
     int greenRoad = sharedData->currentLight;
 
-    // Process all roads and lanes
     for (int roadIndex = 0; roadIndex < 4; roadIndex++) {
         for (int lane = 0; lane < 3; lane++) {
             if (isQueueEmpty(&roadQueues[roadIndex][lane])) continue;
@@ -423,7 +429,7 @@ void processVehicles(SharedData* sharedData) {
                 bool shouldMove = false;
 
                 if (lane == 0) {
-                    // Lane 1: Incoming lane (move every 3 seconds)
+                    // Lane 1: Incoming lane (dequeue every 2 seconds)
                     shouldMove = true;
                 } else if (lane == 1 && roadIndex == greenRoad) {
                     // Lane 2: Outgoing lane (move only if light is green)
@@ -434,19 +440,45 @@ void processVehicles(SharedData* sharedData) {
                 }
 
                 if (shouldMove) {
+                    // Check distance to the previous vehicle
+                    if (prev != NULL) {
+                        float distance = 0;
+                        switch (roadIndex) {
+                            case 0: // Road A (North)
+                                distance = prev->vehicle.yPos - current->vehicle.yPos;
+                                break;
+                            case 1: // Road B (East)
+                                distance = current->vehicle.xPos - prev->vehicle.xPos;
+                                break;
+                            case 2: // Road C (South)
+                                distance = current->vehicle.yPos - prev->vehicle.yPos;
+                                break;
+                            case 3: // Road D (West)
+                                distance = prev->vehicle.xPos - current->vehicle.xPos;
+                                break;
+                        }
+
+                        // Only move if there is enough space
+                        if (distance < VEHICLE_SPACING) {
+                            prev = current;
+                            current = current->next;
+                            continue;
+                        }
+                    }
+
                     // Move vehicle forward in the source lane
                     switch (roadIndex) {
                         case 0: // Road A (North)
-                            current->vehicle.yPos += VEHICLE_SPEED;
+                            current->vehicle.yPos += VEHICLE_MOVE_SPEED;
                             break;
                         case 1: // Road B (East)
-                            current->vehicle.xPos -= VEHICLE_SPEED;
+                            current->vehicle.xPos -= VEHICLE_MOVE_SPEED;
                             break;
                         case 2: // Road C (South)
-                            current->vehicle.yPos -= VEHICLE_SPEED;
+                            current->vehicle.yPos -= VEHICLE_MOVE_SPEED;
                             break;
                         case 3: // Road D (West)
-                            current->vehicle.xPos += VEHICLE_SPEED;
+                            current->vehicle.xPos += VEHICLE_MOVE_SPEED;
                             break;
                     }
 
@@ -465,7 +497,7 @@ void processVehicles(SharedData* sharedData) {
                         int destLane = (destRoadIndex == (roadIndex + 1) % 4) ? 2 : 1;
 
                         // Enqueue to the destination lane if it has space
-                        if (roadQueues[destRoadIndex][destLane - 1].size < 15) {
+                        if (roadQueues[destRoadIndex][destLane - 1].size < MAX_QUEUE_SIZE) {
                             // Update vehicle position to the destination lane
                             updateVehiclePosition(&dequeuedVehicle, destRoadIndex, destLane);
                             enqueue(&roadQueues[destRoadIndex][destLane - 1], dequeuedVehicle);
@@ -489,6 +521,7 @@ void processVehicles(SharedData* sharedData) {
         }
     }
 }
+
 
 DWORD WINAPI readAndParseFile(LPVOID arg) {
     SharedData* sharedData = (SharedData*)arg;
@@ -530,7 +563,6 @@ DWORD WINAPI readAndParseFile(LPVOID arg) {
                 updateVehiclePosition(&newVehicle, sourceIndex, newVehicle.lane);
 
                 // Enqueue to the appropriate lane
-                
                 if (enqueue(&roadQueues[sourceIndex][newVehicle.lane - 1], newVehicle)) {
                     printf("Added Vehicle %s from %s to %s in lane %d\n",
                            newVehicle.vehicleNumber, newVehicle.sourceRoad,
