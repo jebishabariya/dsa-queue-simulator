@@ -5,19 +5,40 @@ Traffic Simulation Project
 This project simulates traffic flow at a four-way intersection with traffic lights and multiple lanes. The simulation demonstrates vehicle movement, lane changing, and traffic light management for optimal traffic flow.
 
 ## Features
+Dynamic Vehicle Handling: Vehicles are enqueued into their respective lanes upon arrival.
 
--Four-way intersection with traffic lights
--Multiple lanes per road:
+Lane-Specific Logic:
 
-    -Lane 1: Exit lane (vehicles moving away from  intersection)
-    -Lane 2: Through lane (controlled by traffic light)
-    -Lane 3: Free-flow lane (no traffic light control)
+Lane 2: Vehicles move forward with a controlled gap and stop at the junction if the light is red. If green, they proceed to their destination.
 
--Dynamic vehicle movement and collision avoidance
-=Traffic light timing system
--Queue-based vehicle management
--Real-time visualization using SDL2
+Lane 1: Vehicles appear at the front of the road and are dequeued when they reach at the end of lane.
 
+Lane 3: Vehicles move to the junction and directly enter their destination without checking the light.
+
+Priority Lane:
+
+A2 has priority: If A2 has more than 10 vehicles, all other lanes receive red signals until A2's count drops below 5.
+
+File Input & Socket Integration: Vehicle data is read from a file or received via a socket.
+
+Real-Time Updates: The system continuously processes incoming vehicles and updates their positions.
+
+## System Design
+Each road has three lanes:
+
+Lane 1: Incoming vehicles (front-queued, dequeued periodically).
+
+Lane 2: Vehicles moving towards the junction (traffic-light dependent).
+
+Lane 3: Outgoing vehicles (light-independent).
+
+Junction Control: Traffic lights dictate movement in Lane 2, while Lane 1 & 3 operate independently.
+
+Queue Management:
+
+Each lane is represented as a queue.
+
+Vehicles move forward and dequeue upon reaching the junction.
 ## Prerequisites:
 Before running this project, make sure you have the following installed:
 
@@ -33,37 +54,6 @@ Run the simulation.
 
 ## DEMO
 ![Traffic Simulation Demo](./trafficsimulation.gif)
-
-## ALGORITHM
-Traffic Light Control:
-
-Traffic lights change based on queue sizes and priority rules.
-
-If a road has more than 10 vehicles in Lane 1, it gets priority.
-
-Vehicle Movement:
-
-Vehicles in Lane 0 are dequeued after 3 seconds.
-
-Vehicles in Lane 1 move only when the traffic light is green.
-
-Vehicles in Lane 2 move without waiting for the traffic light.
-
-File Parsing:
-
-The vehicles.data file is read line by line, and vehicles are enqueued to their respective lanes.
-
-## DATA STRUCTURES:
-VehicleQueue: A queue data structure to manage vehicles in each lane.
-
-SharedData: A structure to share data between threads (e.g., traffic light state).
-
-Multithreading
-Thread 1: Handles traffic light control (chequeQueue).
-
-Thread 2: Handles file parsing and enqueuing vehicles (readAndParseFile).
-
-Main Thread: Handles rendering and vehicle movement.
 
 ## References:
 SDL2 Documentation: https://wiki.libsdl.org/SDL2/FrontPage
