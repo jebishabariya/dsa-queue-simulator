@@ -17,7 +17,7 @@ int isQueueEmpty(VehicleQueue* q) {
 }
 
 // Add a vehicle to the queue
-bool enqueue(VehicleQueue* queue, Vehicle vehicle) {
+bool enqueue(VehicleQueue* queue, Vehicle* vehicle) {
     // Check if queue has reached maximum size
 
 
@@ -27,8 +27,10 @@ bool enqueue(VehicleQueue* queue, Vehicle vehicle) {
         return false;
     }
     
-    newNode->vehicle = vehicle;
+    newNode->vehicle = *vehicle;  // Copy vehicle data
+    newNode->vehicle.isActive = true;  // Mark as active
     newNode->next = NULL;
+
     
     if (queue->rear == NULL) {
         queue->front = queue->rear = newNode;
@@ -65,4 +67,12 @@ void freeQueue(VehicleQueue* q) {
     while (!isQueueEmpty(q)) {
         dequeue(q);
     }
+}
+void clearQueue(VehicleQueue* queue) {
+    while (queue->front != NULL) {
+        Node* temp = queue->front;
+        queue->front = queue->front->next;
+        free(temp);
+    }
+    queue->rear = NULL;
 }

@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <io.h> 
 #include "queue.h"
 
 #define MAX_LINE_LENGTH 20
@@ -24,7 +25,11 @@
 #define MAX_QUEUE_SIZE 15
 #define MAX_LINE_LENGTH 20
 
+#define TEMP_FILE "temp_vehicle.data"
+
+
 const char* VEHICLE_FILE = "vehicles.data";
+
 
 // Road queues for each direction
 VehicleQueue roadQueues[4][3];  // [road][lane]
@@ -130,12 +135,14 @@ int main(int argc, char *argv[]) {
             for (int j = 0; j < 3; j++) {
                 Node* current = roadQueues[i][j].front;
                 while (current != NULL) {
-                    drawVehicle(renderer, &current->vehicle);
+                    if (current->vehicle.isActive) {  // Only draw if active
+                        drawVehicle(renderer, &current->vehicle);
+                    }
                     current = current->next;
                 }
             }
         }
-
+        
 
         // Process vehicle movements
         processVehicles(&sharedData);
@@ -162,6 +169,8 @@ int main(int argc, char *argv[]) {
 }
 
 void drawVehicle(SDL_Renderer* renderer, Vehicle* vehicle) {
+    if (!vehicle->isActive) return;  // Skip if the vehicle is inactive
+
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);  // Black color
     SDL_Rect vehicleRect = {
         (int)vehicle->xPos - VEHICLE_SIZE / 2,
@@ -500,7 +509,7 @@ void processVehicles(SharedData* sharedData) {
                         if (roadQueues[destRoadIndex][destLane - 1].size < MAX_QUEUE_SIZE) {
                             // Update vehicle position to the destination lane
                             updateVehiclePosition(&dequeuedVehicle, destRoadIndex, destLane);
-                            enqueue(&roadQueues[destRoadIndex][destLane - 1], dequeuedVehicle);
+                            enqueue(&roadQueues[destRoadIndex][destLane - 1], &dequeuedVehicle);
                             printf("Enqueued Vehicle %s to Road %c Lane %d\n",
                                    dequeuedVehicle.vehicleNumber, 'A' + destRoadIndex, destLane);
                         } else {
@@ -527,51 +536,82 @@ DWORD WINAPI readAndParseFile(LPVOID arg) {
     SharedData* sharedData = (SharedData*)arg;
 
     while (1) {
-        FILE* file = fopen(VEHICLE_FILE, "r");
+        FILE* file = fopen(VEHICLE_FILE, "r+");  // Open file in read+write mode
         if (!file) {
-            perror("Error opening file");
+            perror("Error opening vehicle file");
             Sleep(2000);
             continue;
         }
 
         char line[MAX_LINE_LENGTH];
+        int firstLineProcessed = 0;
+        long writePos = 0; // Position to overwrite from
+
         while (fgets(line, sizeof(line), file)) {
-            line[strcspn(line, "\n")] = 0;
+            if (!firstLineProcessed) {
+                // Process only the first line and skip writing it back
+                firstLineProcessed = 1;
 
-            Vehicle newVehicle;
-            char* vehicleId = strtok(line, ":");
-            char* sourceRoad = strtok(NULL, ":");
-            char* destinationRoad = strtok(NULL, ":");
+                line[strcspn(line, "\n")] = 0;  // Remove newline character
 
-            if (vehicleId && sourceRoad && destinationRoad) {
-                strncpy(newVehicle.vehicleNumber, vehicleId, 8);
-                newVehicle.vehicleNumber[8] = '\0';
-                strncpy(newVehicle.sourceRoad, sourceRoad, 2);
-                newVehicle.sourceRoad[2] = '\0';
-                strncpy(newVehicle.destinationRoad, destinationRoad, 2);
-                newVehicle.destinationRoad[2] = '\0';
+                Vehicle newVehicle;
+                char* vehicleId = strtok(line, ":");
+                char* sourceRoad = strtok(NULL, ":");
+                char* destinationRoad = strtok(NULL, ":");
 
-                int sourceIndex = sourceRoad[0] - 'A';
-                int destIndex = destinationRoad[0] - 'A';
+                if (vehicleId && sourceRoad && destinationRoad) {
+                    strncpy(newVehicle.vehicleNumber, vehicleId, 8);
+                    newVehicle.vehicleNumber[8] = '\0';
+                    strncpy(newVehicle.sourceRoad, sourceRoad, 2);
+                    newVehicle.sourceRoad[2] = '\0';
+                    strncpy(newVehicle.destinationRoad, destinationRoad, 2);
+                    newVehicle.destinationRoad[2] = '\0';
 
-                if ((sourceIndex + 1) % 4 == destIndex) {
-                    newVehicle.lane = 2;  // Lane 3 (outgoing, no light)
-                } else {
-                    newVehicle.lane = 1;  // Lane 2 (outgoing, affected by light)
+                    int sourceIndex = sourceRoad[0] - 'A';
+
+                    if ((sourceIndex + 1) % 4 == (destinationRoad[0] - 'A')) {
+                        newVehicle.lane = 2;  
+                    } else {
+                        newVehicle.lane = 1;  
+                    }
+
+                    updateVehiclePosition(&newVehicle, sourceIndex, newVehicle.lane);
+
+                    if (enqueue(&roadQueues[sourceIndex][newVehicle.lane - 1], &newVehicle)) {
+                        printf("Added Vehicle %s from %s to %s in lane %d\n",
+                               newVehicle.vehicleNumber, newVehicle.sourceRoad,
+                               newVehicle.destinationRoad, newVehicle.lane);
+                    }
                 }
 
-                updateVehiclePosition(&newVehicle, sourceIndex, newVehicle.lane);
-
-                // Enqueue to the appropriate lane
-                if (enqueue(&roadQueues[sourceIndex][newVehicle.lane - 1], newVehicle)) {
-                    printf("Added Vehicle %s from %s to %s in lane %d\n",
-                           newVehicle.vehicleNumber, newVehicle.sourceRoad,
-                           newVehicle.destinationRoad, newVehicle.lane);
-                }
+                // Mark position where we will overwrite
+                writePos = ftell(file);
             }
         }
+
+        if (firstLineProcessed) {
+            // Overwrite file with remaining content
+            FILE* tempFile = fopen(VEHICLE_FILE, "r+"); // Reopen in read-write mode
+            if (tempFile) {
+                fseek(file, writePos, SEEK_SET); // Move to the remaining content
+                char buffer[MAX_LINE_LENGTH];
+
+                // Move remaining content to the start of the file
+                long newPos = 0;
+                while (fgets(buffer, sizeof(buffer), file)) {
+                    fseek(tempFile, newPos, SEEK_SET);
+                    fputs(buffer, tempFile);
+                    newPos = ftell(tempFile);
+                }
+
+                // Truncate file at new position
+                _chsize_s(_fileno(tempFile), newPos);
+                fclose(tempFile);
+            }
+        }
+
         fclose(file);
-        Sleep(2000);
+        Sleep(1000);
     }
     return 0;
 }

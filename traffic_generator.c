@@ -109,7 +109,7 @@ int main() {
         send(sock, buffer, strlen(buffer), 0);
         printf("Sent: %s\n", buffer);
 
-        Sleep(3000); // Windows equivalent of sleep(1)
+        Sleep(5000); // Windows equivalent of sleep(1)
     }
 
     // Cleanup

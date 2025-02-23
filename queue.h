@@ -18,6 +18,7 @@ typedef struct {
     int lane;
     uint32_t lastMoveTime;
     int enqueueTime;
+    bool isActive;
 } Vehicle;
 
 // Node for the queue
@@ -36,8 +37,9 @@ typedef struct {
 // Function declarations
 void initQueue(VehicleQueue* q);
 int isQueueEmpty(VehicleQueue* q);
-bool enqueue(VehicleQueue* q, Vehicle vehicle);
+bool enqueue(VehicleQueue* q, Vehicle* vehicle);
 Vehicle dequeue(VehicleQueue* q);
 void freeQueue(VehicleQueue* q);
+void clearQueue(VehicleQueue* queue);
 
 #endif // QUEUE_H
