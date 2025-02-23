@@ -539,7 +539,7 @@ DWORD WINAPI readAndParseFile(LPVOID arg) {
         FILE* file = fopen(VEHICLE_FILE, "r+");  // Open file in read+write mode
         if (!file) {
             perror("Error opening vehicle file");
-            Sleep(2000);
+            Sleep(3000);
             continue;
         }
 
