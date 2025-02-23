@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <windows.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
 #include <math.h>
 #include <io.h> 
@@ -135,9 +136,10 @@ int main(int argc, char *argv[]) {
         // Draw vehicles
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 3; j++) {
+        
                 Node* current = roadQueues[i][j].front;
                 while (current != NULL) {
-                    moveVehicleBackward(&current->vehicle, i);  // Move vehicle backward in Lane 3
+                
                     drawVehicle(renderer, &current->vehicle);    // Draw the vehicle
                     current = current->next;
                 }
@@ -187,8 +189,29 @@ void updateVehiclePosition(Vehicle* vehicle, int roadIndex, int lane) {
     int centerX = WINDOW_WIDTH / 2;
     int centerY = WINDOW_HEIGHT / 2;
     int laneOffset = (lane - 2) * LANE_WIDTH;
+
     if (lane == 3) {
-        // If lane == 3, vehicles start from the front and move backward
+        // For lane 3, vehicles start from the junction and move backwards
+        switch (roadIndex) {
+            case 0: // Road A (North)
+                vehicle->xPos = centerX + laneOffset;
+                vehicle->yPos = centerY - ROAD_WIDTH/2;  // Start at junction
+                break;
+            case 1: // Road B (East)
+                vehicle->xPos = centerX + ROAD_WIDTH/2;  // Start at junction
+                vehicle->yPos = centerY + laneOffset;
+                break;
+            case 2: // Road C (South)
+                vehicle->xPos = centerX - laneOffset;
+                vehicle->yPos = centerY + ROAD_WIDTH/2;  // Start at junction
+                break;
+            case 3: // Road D (West)
+                vehicle->xPos = centerX - ROAD_WIDTH/2;  // Start at junction
+                vehicle->yPos = centerY - laneOffset;
+                break;
+        }
+    } else {
+        // Normal behavior for Lane 1 and Lane 2 remains unchanged
         switch (roadIndex) {
             case 0: // Road A (North)
                 vehicle->xPos = centerX + laneOffset;
@@ -208,71 +231,26 @@ void updateVehiclePosition(Vehicle* vehicle, int roadIndex, int lane) {
                 break;
         }
     }
-    else {
-        // Normal behavior for Lane 1 and Lane 2
-        switch (roadIndex) {
-            case 0: // Road A (North)
-                vehicle->xPos = centerX + laneOffset;
-                vehicle->yPos = LANE_WIDTH;
-                break;
-            case 1: // Road B (East)
-                vehicle->xPos = WINDOW_WIDTH - LANE_WIDTH;
-                vehicle->yPos = centerY + laneOffset;
-                break;
-            case 2: // Road C (South)
-                vehicle->xPos = centerX - laneOffset;
-                vehicle->yPos = WINDOW_HEIGHT - LANE_WIDTH;
-                break;
-            case 3: // Road D (West)
-                vehicle->xPos = LANE_WIDTH;
-                vehicle->yPos = centerY - laneOffset;
-                break;
-        }
-    }
+    vehicle->isActive = true;
 }
 
-// Additional function to simulate the vehicle moving along the lane
+// Add a new function to move vehicles backward
 void moveVehicleBackward(Vehicle* vehicle, int roadIndex) {
-    // First, get the front vehicle (i.e., the one that needs to move backward)
-    Node* current = roadQueues[roadIndex][2].front; // Lane 3 is index 2
-
-    if (current == NULL) {
-        printf("No vehicles to move backward in Lane 3.\n");
-        return;
-    }
-
-    // Get the vehicle at the front of Lane 3
-    Vehicle vehicleToMove = current->vehicle;
-
-    // Update the vehicle position (moving backward)
     switch (roadIndex) {
         case 0: // Road A (North)
-            vehicleToMove.yPos -= VEHICLE_MOVE_SPEED;  // Move backward on the Y-axis
+            vehicle->yPos -= VEHICLE_MOVE_SPEED;
             break;
         case 1: // Road B (East)
-            vehicleToMove.xPos += VEHICLE_MOVE_SPEED;  // Move backward on the X-axis
+            vehicle->xPos += VEHICLE_MOVE_SPEED;
             break;
         case 2: // Road C (South)
-            vehicleToMove.yPos += VEHICLE_MOVE_SPEED;  // Move backward on the Y-axis
+            vehicle->yPos += VEHICLE_MOVE_SPEED;
             break;
         case 3: // Road D (West)
-            vehicleToMove.xPos -= VEHICLE_MOVE_SPEED;  // Move backward on the X-axis
+            vehicle->xPos -= VEHICLE_MOVE_SPEED;
             break;
     }
-
-    // After moving, enqueue the vehicle back into the same lane
-    if (roadQueues[roadIndex][2].size < MAX_QUEUE_SIZE) {
-        dequeue(&roadQueues[roadIndex][2]); // Re-enqueue into Lane 3
-        printf("Vehicle %s moved backward in Lane 3 of Road %c.\n", vehicleToMove.vehicleNumber, 'A' + roadIndex);
-    } else {
-        printf("Lane 3 of Road %c is full, vehicle %s could not move backward.\n", 'A' + roadIndex, vehicleToMove.vehicleNumber);
-    }
-
-    // Remove the vehicle from the front of Lane 3
-    dequeue(&roadQueues[roadIndex][2]);
 }
-
-
 
 bool initializeSDL(SDL_Window **window, SDL_Renderer **renderer) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -492,6 +470,8 @@ DWORD WINAPI chequeQueue(LPVOID arg) {
 }
 
 void processVehicles(SharedData* sharedData) {
+    static Uint32 lastDequeueTime[4][3] = {0};  // Track last dequeue time for each road and lane
+    Uint32 currentTime = SDL_GetTicks();
     int greenRoad = sharedData->currentLight;
 
     for (int roadIndex = 0; roadIndex < 4; roadIndex++) {
@@ -503,16 +483,19 @@ void processVehicles(SharedData* sharedData) {
 
             while (current != NULL) {
                 bool shouldMove = false;
+                bool shouldDequeue = false;
 
                 if (lane == 0) {
                     // Lane 1: Incoming lane (dequeue every 2 seconds)
                     shouldMove = true;
+                    shouldDequeue = (currentTime - lastDequeueTime[roadIndex][lane] >= DEQUEUE_INTERVAL);
                 } else if (lane == 1 && roadIndex == greenRoad) {
                     // Lane 2: Outgoing lane (move only if light is green)
                     shouldMove = true;
                 } else if (lane == 2) {
                     // Lane 3: Outgoing lane (move without waiting for light)
                     shouldMove = true;
+                    shouldDequeue = (currentTime - lastDequeueTime[roadIndex][lane] >= LANE3_DEQUEUE_TIME);
                 }
 
                 if (shouldMove) {
@@ -535,27 +518,30 @@ void processVehicles(SharedData* sharedData) {
                         }
 
                         // Only move if there is enough space
-                        if (distance < VEHICLE_SPACING) {
+                        if (abs(distance) < VEHICLE_SPACING) {
                             prev = current;
                             current = current->next;
                             continue;
                         }
                     }
 
-                    // Move vehicle forward in the source lane
-                    switch (roadIndex) {
-                        case 0: // Road A (North)
-                            current->vehicle.yPos += VEHICLE_MOVE_SPEED;
-                            break;
-                        case 1: // Road B (East)
-                            current->vehicle.xPos -= VEHICLE_MOVE_SPEED;
-                            break;
-                        case 2: // Road C (South)
-                            current->vehicle.yPos -= VEHICLE_MOVE_SPEED;
-                            break;
-                        case 3: // Road D (West)
-                            current->vehicle.xPos += VEHICLE_MOVE_SPEED;
-                            break;
+                    if (lane == 2) {  // Lane 3 moves backward
+                        moveVehicleBackward(&current->vehicle, roadIndex);
+                    } else {  // Lane 1 and 2 move forward
+                        switch (roadIndex) {
+                            case 0:
+                                current->vehicle.yPos += VEHICLE_MOVE_SPEED;
+                                break;
+                            case 1:
+                                current->vehicle.xPos -= VEHICLE_MOVE_SPEED;
+                                break;
+                            case 2:
+                                current->vehicle.yPos -= VEHICLE_MOVE_SPEED;
+                                break;
+                            case 3:
+                                current->vehicle.xPos += VEHICLE_MOVE_SPEED;
+                                break;
+                        }
                     }
 
                     // Check if vehicle has reached the junction
