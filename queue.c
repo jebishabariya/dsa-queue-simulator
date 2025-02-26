@@ -20,7 +20,10 @@ int isQueueEmpty(VehicleQueue* q) {
 // Add a vehicle to the queue
 bool enqueue(VehicleQueue* queue, Vehicle* vehicle) {
     // Check if queue has reached maximum size
-    
+    if (queue->size >= 15) {
+        printf("Queue is full (max 15 vehicles). Vehicle rejected.\n");
+        return false;
+    }
 
     Node* newNode = (Node*)malloc(sizeof(Node));
     if (newNode == NULL) {

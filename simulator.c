@@ -657,7 +657,7 @@ DWORD WINAPI readAndParseFile(LPVOID arg) {
                     }
 
                     updateVehiclePosition(&newVehicle, sourceIndex, newVehicle.lane);
-
+                    //if(roadQueues[sourceIndex][newVehicle.lane-1])
                     if (enqueue(&roadQueues[sourceIndex][newVehicle.lane - 1], &newVehicle)) {
                         updateVehiclePosition(&newVehicle, sourceIndex, newVehicle.lane);
                         printf("Added Vehicle %s from %s to %s in lane %d\n",

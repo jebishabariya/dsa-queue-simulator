@@ -57,5 +57,6 @@ Run the simulation.
 
 ## References:
 SDL2 Documentation: https://wiki.libsdl.org/SDL2/FrontPage
+
 SDL2_ttf Documentation:https://github.com/libsdl-org/SDL_ttf
 
